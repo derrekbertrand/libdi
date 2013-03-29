@@ -209,7 +209,7 @@ function di_submit_xml(&$input, $ini_section='default')
         'external_key' => $ini['external_key'],
         'cost' => '1.23',
         'post_date' => date('Y-m-d\TH:i:s'),
-        'agent' => $ini['agent'];
+        'agent' => $ini['agent']
     );
 
     //merge the default items into the input
@@ -224,7 +224,18 @@ function di_submit_xml(&$input, $ini_section='default')
             <?php
             foreach($input as $key => $value)
             {
-                echo '<'.$key.'>'.htmlentities($value).'</'.$key.">\n";
+                if(!is_array($value))
+                    echo '<'.$key.'>'.htmlentities($value).'</'.$key.">\n";
+                else
+                {
+                    //nested arrays are interpreted as additional fields
+                    echo "<additional_fields>\n";
+                    foreach($value as $k => $v)
+                    {
+                        echo '<additional_field form="'.$key.'" field="'.$k.'">'.htmlentities($v)."</additional_field>\n";
+                    }
+                    echo "</additional_fields>\n";
+                }
             } ?>
         </params>
     </api>
