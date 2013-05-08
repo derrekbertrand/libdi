@@ -9,32 +9,39 @@ define('DI_BOT', 2);
 //input being an array or fields
 //errors being an (empty) array of errors
 //fake is the $key of the fake field that should not be filled out
-function di_submit_xml(&$input, $ini_section='default')
-{
-//=============================================================================
-//    FUNCTIONS
-//=============================================================================
-    function do_post_request($url, $data, $optional_headers = null)
+class DISubmission
+{  
+    private $ini_section = 'default';
+
+    //-------------------------------------------------------------------------
+    //    HELPER FUNCTIONS
+    //-------------------------------------------------------------------------
+    public function do_post_request($url, $data, $optional_headers = null)
     {
-      $params = array('http' => array(
+        $params = array('http' => array(
                   'method' => 'POST',
                   'content' => $data
                 ));
-      if ($optional_headers !== null) {
-        $params['http']['header'] = $optional_headers;
-      }
-      $ctx = stream_context_create($params);
-      $fp = @fopen($url, 'rb', false, $ctx);
-      if (!$fp) {
-        echo "Problem with $url, $php_errormsg";
-      }
-      $response = @stream_get_contents($fp);
-      if ($response === false) {
-        echo "Problem reading data from $url, $php_errormsg";
-      }
-      return $response;
+        if ($optional_headers !== null) {
+            $params['http']['header'] = $optional_headers;
+        }
+        $ctx = stream_context_create($params);
+        $fp = @fopen($url, 'rb', false, $ctx);
+        if (!$fp) {
+            echo "Problem with $url, $php_errormsg";
+        }
+        $response = @stream_get_contents($fp);
+        if ($response === false) {
+            echo "Problem reading data from $url, $php_errormsg";
+        }
+        return $response;
     }
-    function email_valid($temp_email) { 
+
+    //-------------------------------------------------------------------------
+    //
+    //-------------------------------------------------------------------------
+    private function _email_valid($temp_email)
+    { 
     //######## Three functions to HELP ######## 
             function valid_dot_pos($email) { 
                 $str_len = strlen($email); 
@@ -117,137 +124,140 @@ function di_submit_xml(&$input, $ini_section='default')
             } 
     }
 
-
-//=============================================================================
-//    DI SUBMIT CODE
-//=============================================================================
-    $errors = array(); //errors starts off empty
-    $ini = parse_ini_file('diconfig.ini.php', true);
-    if($ini === false)
+    //---------------------------------------------------------------------------
+    public function try_submit(&$input)
     {
-        echo 'Could not load DI\'s configuration!';
-        die;
-    }
-    //get the section, as we are only interested in one
-    $ini = $ini[$ini_section];
-    if(!is_array($ini))
-    {
-        echo 'Config does not have a section called: '.$ini_section.'.';
-        die;
-    }
+    //=============================================================================
+    //    DI SUBMIT CODE
+    //=============================================================================
+        $errors = array(); //errors starts off empty
+        $ini = parse_ini_file('diconfig.ini.php', true);
+        if($ini === false)
+        {
+            echo 'Could not load DI\'s configuration!';
+            die;
+        }
+        //get the section, as we are only interested in one
+        $ini = $ini[$ini_section];
+        if(!is_array($ini))
+        {
+            echo 'Config does not have a section called: '.$ini_section.'.';
+            die;
+        }
 
-    //we can work with these things
-    if(!is_array($input))
-    {
-        echo 'Input is not an array!';
-        die;
-    }
+        //we can work with these things
+        if(!is_array($input))
+        {
+            echo 'Input is not an array!';
+            die;
+        }
 
-    //check and sanitize different things
-    foreach($input as $key => $value):
-        switch($key):
-            case ($key==='first_name'):
-            case ($key==='last_name'):
-                if(strlen($value) < 2)
+        //check and sanitize different things
+        foreach($input as $key => $value):
+            switch($key):
+                case ($key==='first_name'):
+                case ($key==='last_name'):
+                    if(strlen($value) < 2)
+                    {
+                        $errors[] = 'Name fields need to be at least 2 characters long.';
+                    }
+                    break;
+                case ($key==='email'):
+                    if(!$this->_email_valid($value))
+                    {
+                        $errors[] = 'Please enter a valid email.';
+                    }
+                    break;
+                //sanitize phone numbers
+                case ($key==='phone_number'):
+                case ($key==='alt_phone'):
+                    //loop through it and maul anything that is not a digit
+                    $old = str_split($value);
+                    $new = '';
+                    foreach($old as $char):
+                        //if is within the range of numbers
+                        if((ord($char) >= 0x30) && (ord($char) <= 0x39))
+                            $new .= $char;
+                    endforeach;
+
+                    //now, check that length is at least 10
+                    if(strlen($new) < 10)
+                    {
+                        $errors[] = 'Please make sure that phone numbers are filled out and include area codes.';
+                    }
+
+                    //add the new string
+                    $input[$key] = $new;
+                    break;
+                //it is the fake field!
+                case ($key===$ini['fake']):
+                    if(strlen($value))
+                    {
+                        //there shouldn't be anything in the fake one!
+                        $errors[] = 'Something bad happened.';
+                    }
+                    break;
+            endswitch;
+        endforeach;
+
+        //input now contains a fully sanitized set of items if return is okay
+        if(count($errors))
+        {
+            // everything was not okay, so return with errors
+            return $errors;
+        }
+
+        $default_params = array(
+            'dnc_check' => 'YES',
+            'duplicate_check' => 'LIST',
+            'gmt_lookup_method' => 'POSTAL',
+            'add_to_hopper' => 'YES',
+            'hopper_priority' => 0,
+            'list_id' => $ini['list_id'],
+            'phone_code' => 1,
+            'external_key' => $ini['external_key'],
+            'cost' => '1.23',
+            'post_date' => date('Y-m-d\TH:i:s'),
+            'agent' => $ini['agent']
+        );
+
+        //merge the default items into the input
+        $input = array_merge($default_params, $input);
+
+        //buffer the xml to use for submission
+        ob_start();
+        echo "<?xml version='1.0' standalone='yes'?>\n";
+        ?>
+        <api mode="admin" function="add_lead" user="<?php echo $ini['username']; ?>" pass="<?php echo $ini['password']; ?>" test="0" debug="0" vdcompat="0">
+            <params>
+                <?php
+                foreach($input as $key => $value)
                 {
-                    $errors[] = 'Name fields need to be at least 2 characters long.';
-                }
-                break;
-            case ($key==='email'):
-                if(!email_valid($value))
-                {
-                    $errors[] = 'Please enter a valid email.';
-                }
-                break;
-            //sanitize phone numbers
-            case ($key==='phone_number'):
-            case ($key==='alt_phone'):
-                //loop through it and maul anything that is not a digit
-                $old = str_split($value);
-                $new = '';
-                foreach($old as $char):
-                    //if is within the range of numbers
-                    if((ord($char) >= 0x30) && (ord($char) <= 0x39))
-                        $new .= $char;
-                endforeach;
+                    if(!is_array($value))
+                        echo '<'.$key.'>'.htmlentities($value).'</'.$key.">\n";
+                    else
+                    {
+                        //nested arrays are interpreted as additional fields
+                        echo "<additional_fields>\n";
+                        foreach($value as $k => $v)
+                        {
+                            echo '<additional_field form="'.$key.'" field="'.$k.'">'.htmlentities($v)."</additional_field>\n";
+                        }
+                        echo "</additional_fields>\n";
+                    }
+                } ?>
+            </params>
+        </api>
+        <?php
+        $xml = ob_get_clean();
 
-                //now, check that length is at least 10
-                if(strlen($new) < 10)
-                {
-                    $errors[] = 'Please make sure that phone numbers are filled out and include area codes.';
-                }
+        $out = do_post_request($ini['post_url'], http_build_query(array( 'xml' => $xml)));
 
-                //add the new string
-                $input[$key] = $new;
-                break;
-            //it is the fake field!
-            case ($key===$ini['fake']):
-                if(strlen($value))
-                {
-                    //there shouldn't be anything in the fake one!
-                    $errors[] = 'Something bad happened.';
-                }
-                break;
-        endswitch;
-    endforeach;
+        //if we have debug set, send the response off
+        if(strlen($ini['debug']))
+            mail($ini['debug'], 'DI SUBMIT TEST', $out);
 
-    //input now contains a fully sanitized set of items if return is okay
-    if(count($errors))
-    {
-        // everything was not okay, so return with errors
         return $errors;
     }
-
-    $default_params = array(
-        'dnc_check' => 'YES',
-        'duplicate_check' => 'LIST',
-        'gmt_lookup_method' => 'POSTAL',
-        'add_to_hopper' => 'YES',
-        'hopper_priority' => 0,
-        'list_id' => $ini['list_id'],
-        'phone_code' => 1,
-        'external_key' => $ini['external_key'],
-        'cost' => '1.23',
-        'post_date' => date('Y-m-d\TH:i:s'),
-        'agent' => $ini['agent']
-    );
-
-    //merge the default items into the input
-    $input = array_merge($default_params, $input);
-
-    //buffer the xml to use for submission
-    ob_start();
-    echo "<?xml version='1.0' standalone='yes'?>\n";
-    ?>
-    <api mode="admin" function="add_lead" user="<?php echo $ini['username']; ?>" pass="<?php echo $ini['password']; ?>" test="0" debug="0" vdcompat="0">
-        <params>
-            <?php
-            foreach($input as $key => $value)
-            {
-                if(!is_array($value))
-                    echo '<'.$key.'>'.htmlentities($value).'</'.$key.">\n";
-                else
-                {
-                    //nested arrays are interpreted as additional fields
-                    echo "<additional_fields>\n";
-                    foreach($value as $k => $v)
-                    {
-                        echo '<additional_field form="'.$key.'" field="'.$k.'">'.htmlentities($v)."</additional_field>\n";
-                    }
-                    echo "</additional_fields>\n";
-                }
-            } ?>
-        </params>
-    </api>
-    <?php
-    $xml = ob_get_clean();
-
-    $out = do_post_request($ini['post_url'], http_build_query(array( 'xml' => $xml)));
-
-    //if we have debug set, send the response off
-    if(strlen($ini['debug']))
-        mail($ini['debug'], 'DI SUBMIT TEST', $out);
-
-    return $errors;
 }
 ?>

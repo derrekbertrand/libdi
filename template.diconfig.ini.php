@@ -1,10 +1,10 @@
 ;<?php die; ?>
 ;This stops the server from displaying the file
 
-
+;------------------------------------------------------------------------------
 ;This is the default section, more sections can be added if needed
+;------------------------------------------------------------------------------
 [default]
-;the ubiquitous username and password
 username="diuser"
 password="password"
 
