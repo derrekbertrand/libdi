@@ -256,7 +256,7 @@ class DISubmission
         <?php
         $xml = ob_get_clean();
 
-        $out = do_post_request($this->ini['post_url'], http_build_query(array( 'xml' => $xml)));
+        $out = $this->do_post_request($this->ini['post_url'], http_build_query(array( 'xml' => $xml)));
 
         //if we have debug set, send the response off
         if(strlen($this->ini['debug']))

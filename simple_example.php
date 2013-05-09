@@ -50,11 +50,11 @@ if(isset($_POST['submit']))
     <body>
         <form method="POST">
             First Name: </br>
-            <input type="text" name="fname" /><br /> <br />
+            <input type="text" name="fname" value="<?php echo htmlentities($fields['first_name']); ?>" /><br /> <br />
             Last Name: </br>
-            <input type="text" name="lname" /><br /> <br />
+            <input type="text" name="lname" value="<?php echo htmlentities($fields['last_name']); ?>" /><br /> <br />
             Phone: </br>
-            <input type="text" name="number" /><br /> <br />
+            <input type="text" name="number" value="<?php echo htmlentities($fields['phone_number']); ?>" /><br /> <br />
             <input type="submit" name="submit"/>
         </form>
     </body>
