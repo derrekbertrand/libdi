@@ -37,28 +37,25 @@ if(isset($_POST['submit']))
         ?>
         <h1>Thank You</h1>
         <?php
+        //we're done
+        exit;
     }
 }
 //we're just showing a form
-else
-{
-    ?>
-    <html>
-        <head>
-            <title>Simple Example</title>
-        </head>
-        <body>
-            <form method="POST">
-                First Name: </br>
-                <input type="text" name="fname" /><br /> <br />
-                Last Name: </br>
-                <input type="text" name="lname" /><br /> <br />
-                Phone: </br>
-                <input type="text" name="number" /><br /> <br />
-                <input type="submit" name="submit"/>
-            </form>
-        </body>
-    </html>
-    <?php
-}
 ?>
+<html>
+    <head>
+        <title>Simple Example</title>
+    </head>
+    <body>
+        <form method="POST">
+            First Name: </br>
+            <input type="text" name="fname" /><br /> <br />
+            Last Name: </br>
+            <input type="text" name="lname" /><br /> <br />
+            Phone: </br>
+            <input type="text" name="number" /><br /> <br />
+            <input type="submit" name="submit"/>
+        </form>
+    </body>
+</html>
