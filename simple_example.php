@@ -14,8 +14,12 @@ if(isset($_POST['submit']))
         'last_name' => $_POST['lname'],
         'phone_number' => $_POST['number']
     );
+    
     //try sending to DI's dialer API
-    $errors = di_submit_xml($fields);
+    $dis = new DISubmission();
+
+    //attempt to submit the fields
+    $errors = $dis->try_submit($fields);
 
     //if we have errors
     if(count($errors))
@@ -27,6 +31,12 @@ if(isset($_POST['submit']))
         //display the errors
         foreach($errors as $err)
             echo $err."<br />\n";
+    }
+    else
+    {
+        ?>
+        <h1>Thank You</h1>
+        <?php
     }
 }
 //we're just showing a form
