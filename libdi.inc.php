@@ -13,6 +13,7 @@ class DISubmission
 {  
     private $ini = false;
     private $errors = array();
+    private $submission = array();
 
     //-------------------------------------------------------------------------
     //    HELPER FUNCTIONS
@@ -157,6 +158,8 @@ class DISubmission
             die;
         }
 
+        $this->submission = $input;
+
         //check and sanitize different things
         foreach($input as $key => $value):
             switch($key):
@@ -175,7 +178,7 @@ class DISubmission
                     break;
                 //sanitize phone numbers
                 case ($key==='phone_number'):
-                case ($key==='alt_phone'):
+                //case ($key==='alt_phone'):
                     //loop through it and maul anything that is not a digit
                     $old = str_split($value);
                     $new = '';
@@ -260,9 +263,24 @@ class DISubmission
 
         //if we have debug set, send the response off
         if(strlen($this->ini['debug']))
-            mail($this->ini['debug'], 'DI SUBMIT TEST', $out);
+            mail($this->ini['debug'], 'DI SUBMIT DEBUG', $out);
 
         return $this->errors;
+    }
+
+    public function get($field = null, $subfield = null)
+    {
+        if($field != null)
+        {
+            if($subfield === null)
+            {
+                return htmlentities($this->submission[$field]);
+            }
+            else
+            {
+                return htmlentities($this->submission[$field][$subfield]);
+            }
+        }
     }
 }
 ?>
