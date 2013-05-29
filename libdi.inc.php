@@ -14,6 +14,28 @@ class DISubmission
     private $ini = false;
     private $errors = array();
     private $submission = array();
+    //a list of standard api values and their textual equivalents
+    private $api_to_text = array(
+        'phone_code' => 'Phone Country Code',
+        'phone_number' => 'Phone Number',
+        'title' => 'Title',
+        'first_name' => 'First Name',
+        'middle_initial' => 'Middle Initial',
+        'last_name' => 'Last Name',
+        'address1' => 'Street Address',
+        'address2' => 'Address Line 2',
+        'address3' => 'Address Line 3',
+        'city' => 'City',
+        'state' => 'State',
+        'province' => 'Province',
+        'postal_code' => 'Postal Code',
+        'country_code' => 'Country Code',
+        'gender' => 'Gender',
+        'date_of_birth' => 'Date of Birth',
+        'alt_phone' => 'Alt Phone',
+        'email' => 'E-Mail',
+        'comments' => 'Comments'
+        );
 
     //-------------------------------------------------------------------------
     //    HELPER FUNCTIONS
@@ -37,6 +59,149 @@ class DISubmission
             echo "Problem reading data from $url, $php_errormsg";
         }
         return $response;
+    }
+
+    //returns true on error
+    //looks in the ini for required fields and checks that they are both submitted and have content
+    //adds errors to error list
+    private function _check_required()
+    {
+        $ret = false;
+
+        $required_fields = explode(',',$this->ini['required']);
+        foreach($required_fields as $value):
+            $value = trim($value);
+            //if the value has a bracket AND a name
+            if((strpos($value, '[') !== false) AND (strpos($value, '=>') !== false))
+            {
+                //get the actual value and text
+                $value = explode('[', $value);
+                //section is: SECTION[...]
+                $section = trim($value[0]);
+                //KEY => 'VALUE' pair
+                $pair = explode('=>', $value[1]);
+                //trim any white space from the key
+                $key = trim($pair[0]);
+                //get rid of the other bracket, the quotes and trim
+                $value = trim(str_replace(array(']', '\''), '', $pair[1]));
+
+                //now we have the section, key, and value
+                //checking its existence is not that different from below
+                if((!isset($this->submission[$section][$key])) OR (!strlen($this->submission[$section][$key])))
+                {
+                    //if we don't already have an error, set one
+                    //unless... we don't have a value like that, then we have to ignore it
+                    if(!isset($this->error[$section.'=>'.$key]))
+                    {
+                        //in this case, value is the text, and key is the 'value' of the field's name
+                        //perhaps a little confusing
+                        $this->error[$section.'=>'.$key] = $value.' is a required field.';
+                        $ret = true;
+                    }
+                }
+            }
+            else
+            {
+                //check to see if it was submitted
+                if((!isset($this->submission[$value])) OR (!strlen($this->submission[$value])))
+                {
+                    //if we don't already have an error, set one
+                    //unless... we don't have a value like that, then we have to ignore it
+                    if(!isset($this->error[$value]))
+                    {
+                        if(isset($this->api_to_text[$value]))
+                        {
+                            $this->error[$value] = $this->api_to_text[$value].' is a required field.';
+                            $ret = true;
+                        }
+                        //we probably shouldn't be able to skip the above if block TODO: add else with error log
+                    }
+                }
+            }
+        endforeach;
+
+        return $ret;
+    }
+
+
+    private function _check_formatting()
+    {
+        //check the formatting of known fields
+        foreach($input as $key => $value):
+            switch($key):
+                case ($key==='first_name'):
+                    if(strlen($value) < 2)
+                    {
+                        $this->errors[] = 'Please enter your first name.';
+                    }
+                    break;
+                case ($key==='last_name'):
+                    if(strlen($value) < 2)
+                    {
+                        $this->errors[] = 'Please enter your last name.';
+                    }
+                    break;
+                case ($key==='address1'):
+                    if(strlen($value) == '')
+                    {
+                        $this->errors[] = 'Please enter your address.';
+                    }
+                    break;
+                case ($key==='city'):
+                    if(strlen($value) == '')
+                    {
+                        $this->errors[] = 'Please enter your city.';
+                    }
+                    break;
+                case ($key==='state'):
+                    if(strlen($value) == '')
+                    {
+                        $this->errors[] = 'Please enter your state.';
+                    }
+                    break;
+                case ($key==='postal_code'):
+                    if(strlen($value) == '')
+                    {
+                        $this->errors[] = 'Please enter your zip code.';
+                    }
+                    break;
+                //sanitize phone numbers
+                case ($key==='phone_number'):
+                //case ($key==='alt_phone'):
+                    //loop through it and maul anything that is not a digit
+                    $old = str_split($value);
+                    $new = '';
+                    foreach($old as $char):
+                        //if is within the range of numbers
+                        if((ord($char) >= 0x30) && (ord($char) <= 0x39))
+                            $new .= $char;
+                    endforeach;
+
+                    //now, check that length is at least 10
+                    if(strlen($new) < 10)
+                    {
+                        $this->errors[] = 'Please enter a valid phone number, with area code.';
+                    }
+
+                    //add the new string
+                    $input[$key] = $new;
+                    break;
+                case ($key==='email'):
+                    if(!$this->_email_valid($value))
+                    {
+                        $this->errors[] = 'Please enter a valid email.';
+                    }
+                    break;
+                //it is the fake field!
+                case ($key===$this->ini['fake']):
+                    if(strlen($value))
+                    {
+                        //there shouldn't be anything in the fake one!
+                        $this->errors[] = 'Something bad happened.';
+                    }
+                    break;
+            endswitch;
+        endforeach;
     }
 
     private function _email_valid($temp_email)
@@ -158,55 +323,13 @@ class DISubmission
             die;
         }
 
+        //get the input for other functions' use
         $this->submission = $input;
 
-        //check and sanitize different things
-        foreach($input as $key => $value):
-            switch($key):
-                case ($key==='first_name'):
-                case ($key==='last_name'):
-                    if(strlen($value) < 2)
-                    {
-                        $this->errors[] = 'Name fields need to be at least 2 characters long.';
-                    }
-                    break;
-                case ($key==='email'):
-                    if(!$this->_email_valid($value))
-                    {
-                        $this->errors[] = 'Please enter a valid email.';
-                    }
-                    break;
-                //sanitize phone numbers
-                case ($key==='phone_number'):
-                //case ($key==='alt_phone'):
-                    //loop through it and maul anything that is not a digit
-                    $old = str_split($value);
-                    $new = '';
-                    foreach($old as $char):
-                        //if is within the range of numbers
-                        if((ord($char) >= 0x30) && (ord($char) <= 0x39))
-                            $new .= $char;
-                    endforeach;
+        //add any errors regarding required submissions
+        $this->_check_required();
 
-                    //now, check that length is at least 10
-                    if(strlen($new) < 10)
-                    {
-                        $this->errors[] = 'Please make sure that phone numbers are filled out and include area codes.';
-                    }
-
-                    //add the new string
-                    $input[$key] = $new;
-                    break;
-                //it is the fake field!
-                case ($key===$this->ini['fake']):
-                    if(strlen($value))
-                    {
-                        //there shouldn't be anything in the fake one!
-                        $this->errors[] = 'Something bad happened.';
-                    }
-                    break;
-            endswitch;
-        endforeach;
+        //check the formatting
 
         //input now contains a fully sanitized set of items if return is okay
         if(count($this->errors))

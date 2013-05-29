@@ -2,7 +2,7 @@
 ;This stops the server from displaying the file
 
 ;------------------------------------------------------------------------------
-;This is the default section, more sections can be added if needed
+;    This is the default section, more sections can be added if needed
 ;------------------------------------------------------------------------------
 [default]
 username="diuser"
@@ -23,3 +23,11 @@ fake="gender"
 ;if you need to debug, put your email address here and you'll
 ;be copied on a response from the API
 ;debug="email@site.com"
+
+;You'll be using the names the API uses. Makes the code cleaner.
+;for special fields we can use an array-ish syntax. I think it makes what is required a lot clearer to the coder.
+required="first_name, last_name, phone1, ADDITIONAL[FIELDNAME => 'Field Name']"
+
+//-----------------------------------------------------------------------------
+//    End of default
+//-----------------------------------------------------------------------------
