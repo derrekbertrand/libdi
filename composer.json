@@ -1,0 +1,13 @@
+{
+    "name": "derrekbertrand/libdi",
+    "description": "A small PHP library for submitting leads to DI.",
+    "license": "GPLv3",
+    "authors": [
+        {
+            "name": "Derrek Adrian Bertrand",
+            "email": "derrekbertrand@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
