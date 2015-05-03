@@ -8,6 +8,11 @@
             "email": "derrekbertrand@gmail.com"
         }
     ],
+    "autoload": {
+        "psr-0": {
+            "LibDI": "src/"
+        }
+    },
     "minimum-stability": "dev",
     "require": {
         "mailgun/mailgun-php": "~1.7"
