@@ -1,6 +1,6 @@
 <?php
 
-namespace \LibDI;
+namespace LibDI;
 
 /**
  * 
@@ -135,21 +135,21 @@ class FormLord
 	private function _cleanConfig($filename)
 	{
 		//lets try to get the config profile
-		$json_str = @file_get_contents('./libdi.'.$filename.'.json.php');
+		$json_str = @file_get_contents(getcwd().'/libdi.'.$filename.'.json.php');
 		if($json_str === false)
 		{
-			$this->error_messages[] = 'Could not open the configuration file ./libdi.'.$filename.'.json.php';
+			$this->error_messages[] = 'Could not open the configuration file '.getcwd().'/libdi.'.$filename.'.json.php';
 			return false;
 		}
-		$user_cfg = json_decode($json_str);
+		$user_cfg = json_decode($json_str, true);
 		if($user_cfg === null)
 		{
-			$this->error_messages[] = 'Could not decode JSON in file ./libdi.'.$filename.'.json.php';
+			$this->error_messages[] = 'Could not decode JSON in file '.getcwd().'/libdi.'.$filename.'.json.php';
 			return false;
 		}
 
 		//get the default config
-		$default_cfg = json_decode($this->_getDefaultJSON());
+		$default_cfg = json_decode($this->_getDefaultJSON(), true);
 		if($default_cfg === null)
 		{
 			$this->error_messages[] = 'Could not decode default JSON.';
