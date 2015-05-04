@@ -9,8 +9,8 @@
         }
     ],
     "autoload": {
-        "psr-0": {
-            "LibDI": "src/"
+        "psr-4": {
+            "LibDI\\": "src/"
         }
     },
     "minimum-stability": "dev",
